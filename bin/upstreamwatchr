@@ -1,0 +1,16 @@
+lib = File.expand_path('../../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'upstreamwatchr'
+
+unless ARGV[0] && ENV['GITLAB_API_ENDPOINT'] && ENV['GITLAB_API_PRIVATE_TOKEN']
+  puts "Usage: upstreamwatchr git@githost.acme.com:/path/repo.git and set $GITLAB_API_ENDPOINT and $GITLAB_API_PRIVATE_TOKEN"
+  exit 1
+end
+project = UpstreamWatchr::GitLabWatchr.new(ARGV[0])
+puts "Debug: #{project.comparator.to_s}" if ENV['DEBUG']
+if project.comparator.has_changes?
+  #project.create_merge_request if different_branches()
+  project.grumble_in_issue
+end
+
+#require 'pry'; binding.pry
