@@ -1,3 +1,4 @@
+#! ruby
 require 'rainbow/ext/string'
 
 lib = File.expand_path('../../lib', __FILE__)
