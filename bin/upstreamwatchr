@@ -1,16 +1,42 @@
+require 'rainbow/ext/string'
+
 lib = File.expand_path('../../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'upstreamwatchr'
 
-unless ARGV[0] && ENV['GITLAB_API_ENDPOINT'] && ENV['GITLAB_API_PRIVATE_TOKEN']
-  puts "Usage: upstreamwatchr git@githost.acme.com:/path/repo.git and set $GITLAB_API_ENDPOINT and $GITLAB_API_PRIVATE_TOKEN"
+unless ENV['GITLAB_API_ENDPOINT'] && ENV['GITLAB_API_PRIVATE_TOKEN']
+  puts "Usage:
+GITLAB_API_ENDPOINT=https://git.acme.com/ GITLAB_API_PRIVATE_TOKEN=abcdefg123456 upstreamwatchr git@githost.acme.com:/path/repo.git
+or to check all available projects:
+GITLAB_API_ENDPOINT=https://git.acme.com/ GITLAB_API_PRIVATE_TOKEN=abcdefg123456 upstreamwatchr"
   exit 1
 end
-project = UpstreamWatchr::GitLabWatchr.new(ARGV[0])
-puts "Debug: #{project.comparator.to_s}" if ENV['DEBUG']
-if project.comparator.has_changes?
-  #project.create_merge_request if different_branches()
-  project.grumble_in_issue
-end
 
-#require 'pry'; binding.pry
+if not ARGV[0]
+   puts "Debug: Not called with a specific project. Checking all I can haz access to!" if ENV['DEBUG']
+   projects = Gitlab.projects(:per_page => 10000)
+   my_uid = Gitlab.user.id
+   projects.select! {|p| ((not p.owner) || p.owner.id != my_uid)}
+   projects.each do |project|
+      begin
+        watch = UpstreamWatchr::GitLabWatchr.new(project.ssh_url_to_repo)
+        info = "Info: #{project.name} (#{project.ssh_url_to_repo}): #{watch.comparator.to_s}"
+        if watch.comparator.has_changes?
+          puts info.color(:red)
+          watch.grumble_in_issue
+        else
+          puts info.color(:green)
+        end
+      rescue => e
+        STDERR.puts "Warn: Failed to check #{project.name} (#{project.ssh_url_to_repo}!"
+        require 'pry'; binding.pry if ENV['DEBUG']
+        STDERR.puts e
+      end
+   end
+else
+  watch = UpstreamWatchr::GitLabWatchr.new(ARGV[0])
+  puts "Debug: #{project.comparator.to_s}" if ENV['DEBUG']
+  if watch.comparator.has_changes?
+    watch.grumble_in_issue
+  end
+end

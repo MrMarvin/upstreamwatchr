@@ -11,7 +11,7 @@ module UpstreamWatchr
     end
 
     def origin_project
-      @origin_project ||= Gitlab.projects.find {|p| p.ssh_url_to_repo == @origin_url || p.http_url_to_repo == @origin_url || p.web_url == @origin_url }
+      @origin_project ||= Gitlab.projects(:per_page => 10000).find {|p| p.ssh_url_to_repo == @origin_url || p.http_url_to_repo == @origin_url || p.web_url == @origin_url }
     end
 
     def upstream_url
@@ -26,7 +26,7 @@ module UpstreamWatchr
     end
 
     def fork
-      @fork ||= (Gitlab.projects.find {|p| p.forked_from_project && p.forked_from_project.id == @origin_project.id } || create_fork)
+      @fork ||= (Gitlab.projects(:per_page => 10000).find {|p| p.forked_from_project && p.forked_from_project.id == @origin_project.id } || create_fork)
     end
 
     def create_merge_request
@@ -71,7 +71,7 @@ module UpstreamWatchr
     end
 
     def create_issue
-      puts "Debug: Creating new issue '#{issue_title}'" if ENV['DEBUG']
+      puts "Warn: Creating new issue '#{issue_title}'"
       Gitlab.create_issue(@origin_project.id,
         issue_title,
         {:description => issue_description}
@@ -85,9 +85,9 @@ module UpstreamWatchr
 
     def grumble_in_issue
       changes_in_title = issue.title.match(/(\d+)/)[1].to_i
-      puts "Debug: Issue states '#{changes_in_title} changes'"
+      puts "Debug: Issue states '#{changes_in_title} changes'" if ENV['DEBUG']
       unless changes_in_title == @comparator.upstream_ahead
-        puts "Debug: Going to update issue to '#{issue_title}'" if ENV['DEBUG']
+        puts "Warn: Going to update issue to '#{issue_title}'"
         update_issue
       end
     end
