@@ -81,6 +81,7 @@ module UpstreamWatchr
     def update_issue
       puts "Debug: Updating issue '#{issue_title}'" if ENV['DEBUG']
       Gitlab.edit_issue(@origin_project.id, issue.id, :title => issue_title)
+      Gitlab.create_issue_note(@origin_project.id, issue.id, issue_title)
     end
 
     def grumble_in_issue
